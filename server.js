@@ -16,6 +16,18 @@ app.use(express.json());
 const cors = require('cors');
 app.use(cors());
 
+const storage = multer.diskStorage({
+	destination:(req, file, cb)=>{
+	  cb(null, "./public/images/");
+	},
+	filename:(req, file, cb)=>{
+	  cb(null, file.originalname);
+	}
+  });
+  
+const upload = multer({storage:storage});
+  
+
 // my recipe list
 let recipes = [
     {
@@ -82,6 +94,50 @@ app.get('/', (req, res) => {
 app.get('/api/recipes', (req, res) => {
     res.send(recipes);
 });
+
+// app.post('/api/recipes', upload.single('img', (req, res) => {
+// 	console.log('made it to the post');
+// }));
+
+// app.post("/api/recipes", upload.single("img", (req,res)=>{
+// 	console.log("made it in the post");
+// }));
+app.post("/api/recipes", upload.single("img"), (req, res) => {
+	// console.log("made it in the post");
+	const result = validateRecipe(req.body);
+
+	if(result.error) {
+		res.status(400).send(result.error.details[0].message);
+	}
+
+	const recipe = {
+		_id: recipes.length + 1,
+		name: req.body.name,
+		description: req.body.description,
+		ingredients: req.body.ingredients.split(',')
+	};
+
+	if(req.file) {
+		recipe.img = 'images/' + req.file.filename;
+	}
+
+	recipes.push(recipe);
+	res.send(recipes);
+
+	// console.log('made it past the validator');
+});
+
+const validateRecipe = (recipe) => {
+	const schema = joi.object({
+		_id:joi.allow(''),
+		ingredients:joi.allow(''),
+		name:joi.string().min(3).required(),
+		description:joi.string().min(3).required()
+	});
+
+	return schema.validate(recipe);
+};
+  
 
 app.listen(3000, () => {
     console.log('listening');

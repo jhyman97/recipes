@@ -1,3 +1,5 @@
+// const e = require("cors");
+
 const getRecipes = async() => {
     try {
         return (await (fetch('api/recipes/'))).json();
@@ -9,6 +11,7 @@ const getRecipes = async() => {
 const showRecipes = async() => {
     const recipes = await getRecipes();
     const recipesDiv = document.getElementById('recipe-list');
+    recipesDiv.innerHTML = '';
     recipes.forEach((recipe) => {
         const section = document.createElement('section');
         section.classList.add('recipe');
@@ -75,6 +78,7 @@ const openDialog = (id) => {
 
 const showRecipeForm = (e) => {
     e.preventDefault();
+    resetForm();
     openDialog('add-recipe-form');
 };
 
@@ -86,6 +90,57 @@ const addIngredient = (e) => {
     section.append(input);
 };
 
+const resetForm = () => {
+    const form = document.getElementById('add-recipe-form');
+    form.reset();
+    document.getElementById('ingredient-boxes').innerHTML = '';
+    document.getElementById('img-prev').src = '';
+};
+
+const addRecipe = async(e) => {
+    e.preventDefault();
+    const form = document.getElementById('add-recipe-form');
+    const formData = new FormData(form);
+    formData.append('ingredients', getIngredients());
+    console.log(formData);
+
+    const response = await fetch('/api/recipes', {
+        method:'POST', 
+        body:formData
+    });
+
+    if(response.status != 200) {
+        console.log('error posting data');
+    }
+
+    await response.json();
+    resetForm();
+    document.getElementById('dialog').display = 'none';
+    showRecipes();
+};
+
+const getIngredients = () => {
+    const inputs = document.querySelectorAll('#ingredient-boxes input');
+    const ingredients = [];
+
+    inputs.forEach((input) => {
+        ingredients.push(input.value);
+    });
+
+    return ingredients;
+};
+
 showRecipes();
+document.getElementById('add-recipe-form').onsubmit = addRecipe;
 document.getElementById('add-link').onclick = showRecipeForm;
 document.getElementById('add-ingredient').onclick = addIngredient;
+document.getElementById('img').onchange = (e) => {
+    const prev = document.getElementById('img-prev');
+    // they didn't pick an image/file is blank
+    if(!e.target.files.length) {
+        prev.src = '';
+        return;
+    }
+
+    prev.src = URL.createObjectURL(e.target.files.item(0));
+};
